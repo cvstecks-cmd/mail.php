@@ -3327,16 +3327,28 @@ const isBotCodeMode =
 
 
         /*
+         * ---------------------------------------------------------
          * DURATION
+         * ---------------------------------------------------------
          */
+        const currentDuration =
+            document.getElementById(
+                'botDuration'
+            );
+        
+        const currentSubmittedDuration =
+            document.getElementById(
+                'submitted_duration'
+            );
+        
         if (
-            submittedDuration &&
-            duration
+            currentDuration &&
+            currentSubmittedDuration
         ) {
-
-            submittedDuration.value =
-                duration.value || '';
-
+        
+            currentSubmittedDuration.value =
+                currentDuration.value || '';
+        
         }
 
 
@@ -3601,25 +3613,33 @@ window.syncBotLaunchSubmissionFields =
         duration.addEventListener(
             'change',
             function () {
-
+    
+                /*
+                 * Bot Code mode is locked.
+                 */
                 if (
                     isBotCodeMode
                 ) {
-
                     return;
-
                 }
-
-                if (submittedDuration) {
-
-                    submittedDuration.value =
+    
+                const currentSubmittedDuration =
+                    document.getElementById(
+                        'submitted_duration'
+                    );
+    
+                if (
+                    currentSubmittedDuration
+                ) {
+    
+                    currentSubmittedDuration.value =
                         this.value || '';
-
+    
                 }
-
+    
             }
         );
-
+    
     }
 
 
@@ -3976,6 +3996,23 @@ window.syncBotLaunchSubmissionFields =
                 }
 
 
+                
+                
+                /*
+                 * Synchronize disabled/hidden fields.
+                 */
+                if (
+                    typeof window.syncBotLaunchSubmissionFields ===
+                    'function'
+                ) {
+                
+                    window.syncBotLaunchSubmissionFields();
+                
+                }
+                
+                /*
+                 * Now create FormData.
+                 */
                 const formData =
                     new FormData(
                         form
@@ -3983,55 +4020,57 @@ window.syncBotLaunchSubmissionFields =
                 
                 
                 /*
-                 * ---------------------------------------------------------
-                 * INCLUDE DISABLED BOT PARAMETERS
-                 * ---------------------------------------------------------
-                 *
-                 * HTML excludes disabled controls from FormData.
-                 * The Bot Type and Duration fields are intentionally
-                 * disabled when a Bot Code has been loaded, so we must
-                 * explicitly add their values to the AJAX request.
+                 * Explicitly set the authoritative duration.
                  */
+                const launchSubmittedDuration =
+                    document.getElementById(
+                        'submitted_duration'
+                    );
                 
-                /*
- * Synchronize disabled/hidden fields.
- */
-if (
-    typeof window.syncBotLaunchSubmissionFields ===
-    'function'
-) {
+                formData.set(
+                    'duration',
+                    launchSubmittedDuration
+                        ? launchSubmittedDuration.value
+                        : ''
+                );
+                
+                
+                formData.set(
+                    'bot_type',
+                    document.getElementById(
+                        'submitted_bot_type'
+                    )?.value || ''
+                );
 
-    window.syncBotLaunchSubmissionFields();
+                formData.set(
+                    'trading_pair',
+                    document.getElementById(
+                        'tradingPair'
+                    )?.value || ''
+                );
+                
+                formData.set(
+                    'amount',
+                    document.getElementById(
+                        'submitted_amount'
+                    )?.value || ''
+                );
+                
 
-}
 
-formData.set(
-    'bot_type',
-    document.getElementById(
-        'submitted_bot_type'
-    )?.value || ''
-);
-
-formData.set(
-    'trading_pair',
-    document.getElementById(
-        'tradingPair'
-    )?.value || ''
-);
-
-formData.set(
-    'duration',
-    document.getElementById(
-        'submitted_duration'
-    )?.value || ''
-);
-
-formData.set(
-    'amount',
-    document.getElementById(
-        'submitted_amount'
-    )?.value || ''
-);
+                console.log(
+                    'BOT DURATION:',
+                    document.getElementById(
+                        'botDuration'
+                    )?.value
+                );
+                
+                console.log(
+                    'SUBMITTED DURATION:',
+                    document.getElementById(
+                        'submitted_duration'
+                    )?.value
+                );
                 
                 
                 /*
