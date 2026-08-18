@@ -3354,6 +3354,13 @@ const isBotCodeMode =
         }
 
     }
+    
+    /*
+ * Make the synchronization function available
+ * to the Bot Launch script.
+ */
+window.syncBotLaunchSubmissionFields =
+    syncSubmissionFields;
 
 
     /*
@@ -4146,55 +4153,34 @@ formData.set(
 
 
                     /*
-                     * Reset amount after successful launch.
-                     */
-                    const amountInput =
-    document.getElementById(
-        'investmentAmount'
-    );
-
-const submittedAmount =
-    document.getElementById(
-        'submitted_amount'
-    );
-
-if (amountInput) {
-
-    amountInput.value =
-        '';
-
-}
-
-if (submittedAmount) {
-
-    submittedAmount.value =
-        '';
-
-}
-
-const amountInput =
-    document.getElementById(
-        'investmentAmount'
-    );
-
-const submittedAmount =
-    document.getElementById(
-        'submitted_amount'
-    );
-
-if (amountInput) {
-
-    amountInput.value =
-        '';
-
-}
-
-if (submittedAmount) {
-
-    submittedAmount.value =
-        '';
-
-}
+                 * Reset investment amount after
+                 * successful launch.
+                 */
+                const launchAmountInput =
+                    document.getElementById(
+                        'investmentAmount'
+                    );
+                
+                const launchSubmittedAmount =
+                    document.getElementById(
+                        'submitted_amount'
+                    );
+                
+                
+                if (launchAmountInput) {
+                
+                    launchAmountInput.value =
+                        '';
+                
+                }
+                
+                
+                if (launchSubmittedAmount) {
+                
+                    launchSubmittedAmount.value =
+                        '';
+                
+                }
 
 
                     /*
