@@ -3196,38 +3196,40 @@
         @json($isBotCodeMode);
 
 
-    const botCodeConfig =
-        @json(
-            $isBotCodeMode
-                ? [
-                    'bot_type' =>
-                        strtolower(
-                            trim(
-                                (string)
-                                $botCode->bot->bot_type
-                            )
-                        ),
+    @php
 
-                    'trading_pair' =>
-                        strtoupper(
-                            trim(
-                                (string)
-                                $botCode->trading_pair
-                            )
-                        ),
+    $botCodeConfig = null;
 
-                    'duration' =>
-                        (string)
-                        $botCode->duration,
+    if ($isBotCodeMode && $botCode) {
 
-                    'amount' =>
-                        $prefilledAmount !== null
-                            ? (float)
-                                $prefilledAmount
-                            : null,
-                ]
-                : null
-        );
+        $botCodeConfig = [
+            'bot_type' => strtolower(
+                trim(
+                    (string) $botCode->bot->bot_type
+                )
+            ),
+
+            'trading_pair' => strtoupper(
+                trim(
+                    (string) $botCode->trading_pair
+                )
+            ),
+
+            'duration' => (string) $botCode->duration,
+
+            'amount' => $prefilledAmount !== null
+                ? (float) $prefilledAmount
+                : null,
+        ];
+    }
+
+@endphp
+
+const botCodeConfig =
+    @json($botCodeConfig);
+
+const isBotCodeMode =
+    @json($isBotCodeMode);
 
 
     /*
