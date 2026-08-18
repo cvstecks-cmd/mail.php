@@ -1270,186 +1270,423 @@
             </h3>
 
 
-            <form
-                id="subscribeForm"
-                method="POST"
-                action="{{ route('bots.subscribe') }}"
-                class="space-y-4"
+            {{-- =========================================================
+     BOT PARAMETERS
+     ========================================================= --}}
+
+@php
+    /*
+     * Determine whether this page was reached through
+     * a validated Bot Code.
+     */
+    $isBotCodeMode = $botCode !== null;
+
+    /*
+     * Manual Bot configuration.
+     */
+    $manualBotType = strtolower(
+        trim(
+            (string) $bot->bot_type
+        )
+    );
+
+    /*
+     * Bot Code configuration.
+     */
+    $codeBotType = $isBotCodeMode
+        ? strtolower(
+            trim(
+                (string) $botCode->bot->bot_type
+            )
+        )
+        : '';
+
+    $codeTradingPair = $isBotCodeMode
+        ? strtoupper(
+            trim(
+                (string) $botCode->trading_pair
+            )
+        )
+        : '';
+
+    $codeDuration = $isBotCodeMode
+        ? (string) $botCode->duration
+        : '';
+
+    /*
+     * Amount previously validated through Continue To Bot.
+     */
+    $codeAmount = $isBotCodeMode
+        ? $prefilledAmount
+        : null;
+@endphp
+
+
+<form
+    id="subscribeForm"
+    method="POST"
+    action="{{ route('bots.subscribe') }}"
+    class="space-y-4"
+>
+
+    @csrf
+
+
+    {{-- =====================================================
+         BOT TYPE
+         ===================================================== --}}
+
+    <div>
+
+        <label
+            class="block text-[10px] text-muted mb-1.5 uppercase font-semibold"
+            for="botType"
+        >
+            Trading Bot Type
+        </label>
+
+        <select
+            id="botType"
+            name="bot_type"
+            required
+            disabled
+            class="w-full bg-[#262628] border border-white/5 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-accent/40 disabled:opacity-70 disabled:cursor-not-allowed"
+        >
+
+            <option
+                value="{{ $isBotCodeMode ? $codeBotType : $manualBotType }}"
+                selected
+            >
+                {{ ucfirst($isBotCodeMode ? $codeBotType : $manualBotType) }} Bot
+            </option>
+
+        </select>
+
+
+        {{--
+
+            This is the actual submitted Bot Type.
+
+            The visible select is intentionally disabled
+            in BOTH modes.
+
+            Manual:
+                value comes from selected Bot.
+
+            Bot Code:
+                value comes from validated Bot Code.
+
+        --}}
+        <input
+            type="hidden"
+            name="bot_type"
+            id="submitted_bot_type"
+            value="{{ $isBotCodeMode ? $codeBotType : $manualBotType }}"
+        >
+
+    </div>
+
+
+    {{-- =====================================================
+         TRADING PAIR
+         ===================================================== --}}
+
+    <div>
+
+        <label
+            class="block text-[10px] text-muted mb-1.5 uppercase font-semibold"
+            for="tradingPairSelect"
+        >
+            Trading Pair
+        </label>
+
+
+        <select
+            id="tradingPairSelect"
+            required
+            {{ $isBotCodeMode ? 'disabled' : '' }}
+            class="w-full bg-[#262628] border border-white/5 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-accent/40 disabled:opacity-70 disabled:cursor-not-allowed"
+        >
+
+            @if($isBotCodeMode)
+
+                <option
+                    value="{{ $codeTradingPair }}"
+                    selected
+                >
+                    {{ $codeTradingPair }}
+                </option>
+
+            @else
+
+                <option
+                    value=""
+                    selected
+                    disabled
+                >
+                    Select Trading Pair
+                </option>
+
+                @foreach(
+                    ($supportedPairs ?? []) as $pair
+                )
+
+                    @php
+                        $pairValue = strtoupper(
+                            trim(
+                                is_array($pair)
+                                    ? (
+                                        $pair['value']
+                                        ?? $pair['pair']
+                                        ?? $pair['symbol']
+                                        ?? ''
+                                    )
+                                    : $pair
+                            )
+                        );
+                    @endphp
+
+                    @if($pairValue !== '')
+
+                        <option
+                            value="{{ $pairValue }}"
+                        >
+                            {{ $pairValue }}
+                        </option>
+
+                    @endif
+
+                @endforeach
+
+            @endif
+
+        </select>
+
+
+        {{--
+
+            Hidden submission field.
+
+            Manual mode:
+                JavaScript copies the selected pair here.
+
+            Bot Code mode:
+                JavaScript fills this directly from
+                the validated Bot Code.
+
+        --}}
+        <input
+            type="hidden"
+            name="trading_pair"
+            id="tradingPair"
+            value="{{ $isBotCodeMode ? $codeTradingPair : '' }}"
+        >
+
+    </div>
+
+
+    {{-- =====================================================
+         ACTIVE DURATION
+         ===================================================== --}}
+
+    <div>
+
+        <label
+            class="block text-[10px] text-muted mb-1.5 uppercase font-semibold"
+            for="botDuration"
+        >
+            Active Duration
+        </label>
+
+
+        <select
+            id="botDuration"
+            required
+            {{ $isBotCodeMode ? 'disabled' : '' }}
+            class="w-full bg-[#262628] border border-white/5 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-accent/40 disabled:opacity-70 disabled:cursor-not-allowed"
+        >
+
+            <option
+                value=""
+                disabled
+                {{ !$isBotCodeMode ? 'selected' : '' }}
+            >
+                {{ $isBotCodeMode ? $codeDuration : 'Select Duration' }}
+            </option>
+
+
+            @if($isBotCodeMode)
+
+                <option
+                    value="{{ $codeDuration }}"
+                    selected
+                >
+                    {{ $codeDuration }}
+                </option>
+
+            @else
+
+                @foreach(
+                    ($durationOptions ?? []) as $rawDuration
+                )
+
+                    @php
+
+                        if (
+                            is_array($rawDuration)
+                        ) {
+
+                            $durationValue =
+                                $rawDuration['value']
+                                ??
+                                $rawDuration['duration']
+                                ??
+                                $rawDuration['key']
+                                ??
+                                '';
+
+                            $durationLabel =
+                                $rawDuration['label']
+                                ??
+                                $rawDuration['name']
+                                ??
+                                $durationValue;
+
+                        } else {
+
+                            $durationValue =
+                                $rawDuration;
+
+                            $durationLabel =
+                                $rawDuration;
+
+                        }
+
+                    @endphp
+
+                    @if(
+                        trim(
+                            (string) $durationValue
+                        ) !== ''
+                    )
+
+                        <option
+                            value="{{ $durationValue }}"
+                        >
+                            {{ $durationLabel }}
+                        </option>
+
+                    @endif
+
+                @endforeach
+
+            @endif
+
+        </select>
+
+
+        {{--
+
+            Hidden duration field.
+
+            This is what gets submitted because the
+            visible duration select is disabled in
+            Bot Code mode.
+
+            It is also kept synchronized in manual mode.
+
+        --}}
+        <input
+            type="hidden"
+            name="duration"
+            id="submitted_duration"
+            value="{{ $isBotCodeMode ? $codeDuration : '' }}"
+        >
+
+    </div>
+
+
+    {{-- =====================================================
+         INVESTMENT AMOUNT
+         ===================================================== --}}
+
+    <div>
+
+        <label
+            class="block text-[10px] text-muted mb-1.5 uppercase font-semibold"
+            for="investmentAmount"
+        >
+            Investment Amount (USDT)
+        </label>
+
+
+        <div class="relative">
+
+            <input
+                type="number"
+                id="investmentAmount"
+                step="0.00000001"
+                min="{{ $bot->min_amount }}"
+                max="{{ $bot->max_amount }}"
+                value="{{ $isBotCodeMode && $codeAmount !== null
+                    ? number_format((float) $codeAmount, 8, '.', '')
+                    : '' }}"
+                required
+                {{ $isBotCodeMode ? 'readonly' : '' }}
+                class="w-full bg-[#262628] border border-white/5 rounded-xl pl-4 pr-16 py-2.5 text-sm text-white focus:outline-none focus:border-accent/40 {{ $isBotCodeMode ? 'opacity-70 cursor-not-allowed' : '' }}"
+                placeholder="0.00"
             >
 
-                @csrf
-                
+
+            {{--
+
+                Submitted investment amount.
+
+                Manual:
+                    JavaScript synchronizes this with
+                    the editable investment field.
+
+                Bot Code:
+                    It contains the previously validated
+                    amount.
+
+            --}}
+            <input
+                type="hidden"
+                name="amount"
+                id="submitted_amount"
+                value="{{ $isBotCodeMode && $codeAmount !== null
+                    ? number_format((float) $codeAmount, 8, '.', '')
+                    : '' }}"
+            >
 
 
-                <input
-                    type="hidden"
-                    id="tradingPair"
-                    name="trading_pair"
-                    value="{{ $botCode ? strtoupper($botCode->trading_pair) : '' }}"
-                >
+            <span
+                class="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-semibold text-accent"
+            >
+                USDT
+            </span>
+
+        </div>
 
 
-                <!-- BOT TYPE -->
+        <div
+            class="flex justify-between mt-1.5 text-[9px] text-muted"
+        >
+            <span>
+                Minimum:
+                {{ number_format((float) $bot->min_amount, 2) }}
+                USDT
+            </span>
 
-                <div>
+            <span>
+                Maximum:
+                {{ number_format((float) $bot->max_amount, 2) }}
+                USDT
+            </span>
+        </div>
 
-                    <label
-                        class="block text-[10px] text-muted mb-1.5 uppercase font-semibold"
-                        for="botType"
-                    >
-                        Trading Bot Type
-                    </label>
-
-
-                    <select
-                        id="botType"
-                        name="bot_type"
-                        required
-                        disabled
-                        class="w-full bg-[#262628] border border-white/5 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-accent/40 disabled:opacity-70 disabled:cursor-not-allowed"
-                    >
-                    
-                        <option
-                            value=""
-                            disabled
-                            {{ !$botCode ? 'selected' : '' }}
-                        >
-                            Select Bot
-                        </option>
-                    
-                        @foreach($botSettings as $setting)
-                    
-                            @php
-                                $type =
-                                    strtolower(
-                                        trim(
-                                            (string) $setting->bot_type
-                                        )
-                                    );
-                    
-                                $selectedType =
-                                    $botCode
-                                        ? strtolower(
-                                            trim(
-                                                (string) $botCode->bot->bot_type
-                                            )
-                                        )
-                                        : '';
-                            @endphp
-                    
-                            @if($type !== '')
-                    
-                                <option
-                                    value="{{ $type }}"
-                                    {{ $type === $selectedType ? 'selected' : '' }}
-                                >
-                                    {{ ucfirst($type) }} Bot
-                                </option>
-                    
-                            @endif
-                    
-                        @endforeach
-                    
-                    </select>
-                    
-                    <input
-                        type="hidden"
-                        name="bot_type"
-                        id="submitted_bot_type"
-                        value="{{ old(
-                            'bot_type',
-                            $botCodeConfig['bot_type']
-                                ?? (
-                                    isset($bot->bot_type)
-                                        ? strtolower(trim((string) $bot->bot_type))
-                                        : ''
-                                )
-                        ) }}"
-                    >
-
-                </div>
-
-
-                <!-- DURATION -->
-
-                <div>
-
-                    <label
-                        class="block text-[10px] text-muted mb-1.5 uppercase font-semibold"
-                        for="botDuration"
-                    >
-                        Active Duration
-                    </label>
-
-
-                    <select
-                        id="botDuration"
-                        name="duration"
-                        required
-                        disabled
-                        class="w-full bg-[#262628] border border-white/5 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-accent/40 disabled:opacity-70 disabled:cursor-not-allowed"
-                    >
-                    
-                        <option
-                            value="{{ $botCode ? $botCode->duration : '' }}"
-                            selected
-                        >
-                            {{ $botCode ? $botCode->duration : 'Select Bot First' }}
-                        </option>
-                    
-                    </select>
-                    <input
-                        type="hidden"
-                        name="duration"
-                        id="submitted_duration"
-                        value="{{ $botCodeConfig['duration'] ?? '' }}"
-                    >
-
-                </div>
-
-
-                <!-- INVESTMENT -->
-
-                <div>
-
-                    <label
-                        class="block text-[10px] text-muted mb-1.5 uppercase font-semibold"
-                    >
-                        Investment Amount (USDT)
-                    </label>
-
-
-                    <div class="relative">
-
-                        <input
-                            type="number"
-                            name="amount"
-                            id="investmentAmount"
-                            step="0.00000001"
-                            min="{{ $bot->min_amount }}"
-                            max="{{ $bot->max_amount }}"
-                            value="{{ $prefilledAmount !== null ? number_format((float) $prefilledAmount, 8, '.', '') : '' }}"
-                            required
-                            {{ $botCode ? 'readonly' : '' }}
-                            class="w-full bg-[#262628] border border-white/5 rounded-xl pl-4 pr-16 py-2.5 text-sm text-white focus:outline-none focus:border-accent/40 {{ $botCode ? 'opacity-70 cursor-not-allowed' : '' }}"
-                            placeholder="0.00"
-                        >
-                        <input
-                            type="hidden"
-                            name="amount"
-                            id="submitted_amount"
-                            value="{{ $prefilledAmount ?? '' }}"
-                        >
-
-                        <span
-                            class="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-semibold text-accent"
-                        >
-                            USDT
-                        </span>
-
-                    </div>
-
-                </div>
+    </div>
 
 
                 <!-- WALLET -->
@@ -2920,44 +3157,100 @@
 
 
     <script>
-
 (function () {
 
     'use strict';
 
 
-    const settings =
+    /*
+     * =========================================================
+     * BOT LAUNCH CONFIGURATION
+     * =========================================================
+     *
+     * There are two modes:
+     *
+     * 1. MANUAL BOT MODE
+     *
+     *    Bot is opened directly from the Bots page.
+     *
+     *    - Bot Type     = selected Bot
+     *    - Pair         = selectable
+     *    - Duration     = selectable
+     *    - Amount       = editable
+     *
+     *
+     * 2. BOT CODE MODE
+     *
+     *    Bot Code was validated before reaching this page.
+     *
+     *    - Bot Type     = locked
+     *    - Pair         = locked
+     *    - Duration     = locked
+     *    - Amount       = locked
+     *
+     * =========================================================
+     */
+
+
+    const isBotCodeMode =
+        @json($isBotCodeMode);
+
+
+    const botCodeConfig =
         @json(
-            $botSettings
-                ->map(
-                    function ($setting) {
+            $isBotCodeMode
+                ? [
+                    'bot_type' =>
+                        strtolower(
+                            trim(
+                                (string)
+                                $botCode->bot->bot_type
+                            )
+                        ),
 
-                        return [
+                    'trading_pair' =>
+                        strtoupper(
+                            trim(
+                                (string)
+                                $botCode->trading_pair
+                            )
+                        ),
 
-                            'bot_type' =>
-                                strtolower(
-                                    trim(
-                                        (string)
-                                        $setting->bot_type
-                                    )
-                                ),
+                    'duration' =>
+                        (string)
+                        $botCode->duration,
 
-                            'duration_options' =>
-                                $setting
-                                    ->duration_options
-                                ?? [],
-
-                        ];
-
-                    }
-                )
-                ->values()
+                    'amount' =>
+                        $prefilledAmount !== null
+                            ? (float)
+                                $prefilledAmount
+                            : null,
+                ]
+                : null
         );
 
+
+    /*
+     * ---------------------------------------------------------
+     * DOM ELEMENTS
+     * ---------------------------------------------------------
+     */
 
     const botType =
         document.getElementById(
             'botType'
+        );
+
+
+    const tradingPairSelect =
+        document.getElementById(
+            'tradingPairSelect'
+        );
+
+
+    const tradingPair =
+        document.getElementById(
+            'tradingPair'
         );
 
 
@@ -2967,352 +3260,124 @@
         );
 
 
-    /*
-     * ---------------------------------------------------------
-     * BOT CODE CONFIGURATION
-     * ---------------------------------------------------------
-     */
-
-    @php
-        $botCodeConfig = null;
-    
-        if ($botCode) {
-            $botCodeConfig = [
-                'bot_type' => strtolower(
-                    trim(
-                        (string) $botCode->bot->bot_type
-                    )
-                ),
-    
-                'trading_pair' => strtoupper(
-                    trim(
-                        (string) $botCode->trading_pair
-                    )
-                ),
-    
-                'duration' => (string) $botCode->duration,
-    
-                'amount' => $prefilledAmount !== null
-                    ? (float) $prefilledAmount
-                    : null,
-            ];
-        }
-    @endphp
-    
-    const botCodeConfig = @json($botCodeConfig);
-    
-    function syncBotCodeSubmissionFields() {
-
-    if (!botCodeConfig) {
-        return;
-    }
-
     const submittedBotType =
-        document.getElementById('submitted_bot_type');
+        document.getElementById(
+            'submitted_bot_type'
+        );
 
-    const submittedTradingPair =
-        document.getElementById('submitted_trading_pair');
 
     const submittedDuration =
-        document.getElementById('submitted_duration');
+        document.getElementById(
+            'submitted_duration'
+        );
+
 
     const submittedAmount =
-        document.getElementById('submitted_amount');
-
-    if (submittedBotType) {
-        submittedBotType.value =
-            botCodeConfig.bot_type || '';
-    }
-
-    if (submittedTradingPair) {
-        submittedTradingPair.value =
-            botCodeConfig.trading_pair || '';
-    }
-
-    if (submittedDuration) {
-        submittedDuration.value =
-            botCodeConfig.duration || '';
-    }
-
-    if (
-        submittedAmount &&
-        botCodeConfig.amount !== null &&
-        botCodeConfig.amount !== undefined
-    ) {
-        submittedAmount.value =
-            botCodeConfig.amount;
-    }
-}
-
-syncBotCodeSubmissionFields();
-
-
-    /*
-     * ---------------------------------------------------------
-     * NORMALIZE DURATION
-     * ---------------------------------------------------------
-     */
-
-    function normalizeDuration(
-        option
-    ) {
-
-        if (
-            typeof option ===
-            'string'
-        ) {
-
-            return {
-
-                value:
-                    option,
-
-                label:
-                    option
-
-            };
-
-        }
-
-
-        if (
-            option &&
-            typeof option ===
-            'object'
-        ) {
-
-            const value =
-                option.value ??
-                option.duration ??
-                option.key ??
-                '';
-
-
-            const label =
-                option.label ??
-                option.name ??
-                value;
-
-
-            return {
-
-                value:
-                    String(
-                        value
-                    ),
-
-                label:
-                    String(
-                        label
-                    )
-
-            };
-
-        }
-
-
-        return null;
-
-    }
-
-
-    /*
-     * ---------------------------------------------------------
-     * POPULATE DURATIONS
-     * ---------------------------------------------------------
-     */
-
-    function populateDurations(
-    selectedType,
-    selectedDuration = null,
-    lockDuration = false
-) {
-    if (!duration) {
-        return;
-    }
-
-    duration.innerHTML = '';
-
-    const placeholder =
-        document.createElement('option');
-
-    placeholder.value = '';
-    placeholder.disabled = true;
-
-    placeholder.textContent =
-        selectedType
-            ? 'Select Duration'
-            : 'Select Bot First';
-
-    duration.appendChild(
-        placeholder
-    );
-
-    const setting =
-        settings.find(
-            function (item) {
-
-                return (
-                    String(item.bot_type)
-                        .toLowerCase()
-                    ===
-                    String(selectedType)
-                        .toLowerCase()
-                );
-
-            }
+        document.getElementById(
+            'submitted_amount'
         );
 
-    if (
-        !setting ||
-        !Array.isArray(
-            setting.duration_options
-        )
-    ) {
 
-        duration.disabled = true;
-
-        return;
-    }
-
-    let matched = false;
-
-    setting.duration_options.forEach(
-        function (rawOption) {
-
-            const option =
-                normalizeDuration(
-                    rawOption
-                );
-
-            if (
-                !option ||
-                !option.value
-            ) {
-                return;
-            }
-
-            const element =
-                document.createElement(
-                    'option'
-                );
-
-            element.value =
-                option.value;
-
-            element.textContent =
-                option.label;
-
-            if (
-                selectedDuration !== null
-                &&
-                String(option.value)
-                    .toLowerCase()
-                ===
-                String(selectedDuration)
-                    .toLowerCase()
-            ) {
-
-                element.selected = true;
-
-                matched = true;
-            }
-
-            duration.appendChild(
-                element
-            );
-        }
-    );
-
-    /*
-     * Select the Bot Code duration
-     * when supplied.
-     */
-    if (
-        selectedDuration !== null &&
-        matched
-    ) {
-
-        duration.value =
-            selectedDuration;
-    }
-
-    /*
-     * IMPORTANT:
-     *
-     * Manual mode:
-     *     lockDuration = false
-     *     => user can select duration
-     *
-     * Bot Code mode:
-     *     lockDuration = true
-     *     => duration is disabled
-     */
-    duration.disabled =
-        lockDuration;
-}
-
-
-    /*
-     * ---------------------------------------------------------
-     * APPLY LOADED BOT CODE
-     * ---------------------------------------------------------
-     */
-
-    function applyBotCodeConfiguration() {
-
-        if (
-    !botCodeConfig ||
-    !botCodeConfig.bot_type
-) {
-
-    /*
-     * MANUAL BOT MODE
-     *
-     * The selected bot is already known
-     * from the URL/controller.
-     */
-
-    if (botType) {
-
-        botType.disabled = true;
-
-    }
-
-    /*
-     * Populate all durations belonging
-     * to this bot type.
-     */
-    if (
-        botType &&
-        botType.value
-    ) {
-
-        populateDurations(
-            botType.value,
-            null,
-            false
+    const amountInput =
+        document.getElementById(
+            'investmentAmount'
         );
 
-    } else if (duration) {
 
-        duration.disabled = true;
+    /*
+     * ---------------------------------------------------------
+     * SYNCHRONIZE HIDDEN FIELDS
+     * ---------------------------------------------------------
+     *
+     * The hidden fields are the actual values submitted
+     * for locked fields.
+     * ---------------------------------------------------------
+     */
 
-    }
+    function syncSubmissionFields() {
 
-    return;
-}
+        /*
+         * BOT TYPE
+         */
+        if (
+            submittedBotType &&
+            botType
+        ) {
+
+            submittedBotType.value =
+                botType.value || '';
+
+        }
 
 
         /*
-         * Bot Type
+         * TRADING PAIR
          */
+        if (
+            tradingPair &&
+            tradingPairSelect
+        ) {
 
+            tradingPair.value =
+                tradingPairSelect.value || '';
+
+        }
+
+
+        /*
+         * DURATION
+         */
+        if (
+            submittedDuration &&
+            duration
+        ) {
+
+            submittedDuration.value =
+                duration.value || '';
+
+        }
+
+
+        /*
+         * INVESTMENT
+         */
+        if (
+            submittedAmount &&
+            amountInput
+        ) {
+
+            submittedAmount.value =
+                amountInput.value || '';
+
+        }
+
+    }
+
+
+    /*
+     * ---------------------------------------------------------
+     * APPLY MANUAL BOT CONFIGURATION
+     * ---------------------------------------------------------
+     */
+
+    function initializeManualMode() {
+
+        /*
+         * The selected Bot is already known.
+         *
+         * Do not allow the user to change the Bot Type.
+         */
         if (botType) {
 
             botType.value =
-                botCodeConfig.bot_type;
-
+                @json(
+                    strtolower(
+                        trim(
+                            (string)
+                            $bot->bot_type
+                        )
+                    )
+                );
 
             botType.disabled =
                 true;
@@ -3321,52 +3386,161 @@ syncBotCodeSubmissionFields();
 
 
         /*
-         * Duration
+         * Trading Pair is selectable.
          */
+        if (tradingPairSelect) {
 
-        populateDurations(
-            botCodeConfig.bot_type,
-            botCodeConfig.duration
-        );
-
-
-        /*
-         * Trading Pair
-         */
-
-        const tradingPair =
-            document.getElementById(
-                'tradingPair'
-            );
-
-
-        if (
-            tradingPair &&
-            botCodeConfig.trading_pair
-        ) {
-
-            tradingPair.value =
-                botCodeConfig.trading_pair;
+            tradingPairSelect.disabled =
+                false;
 
         }
 
 
         /*
-         * Amount
+         * Duration is selectable.
          */
+        if (duration) {
 
-        const amountInput =
-            document.querySelector(
-                'input[name="amount"]'
-            );
+            duration.disabled =
+                false;
 
+        }
+
+
+        /*
+         * Investment is editable.
+         */
+        if (amountInput) {
+
+            amountInput.readOnly =
+                false;
+
+        }
+
+
+        syncSubmissionFields();
+
+    }
+
+
+    /*
+     * ---------------------------------------------------------
+     * APPLY BOT CODE CONFIGURATION
+     * ---------------------------------------------------------
+     */
+
+    function initializeBotCodeMode() {
 
         if (
+            !botCodeConfig
+        ) {
+
+            return;
+
+        }
+
+
+        /*
+         * BOT TYPE
+         */
+        if (botType) {
+
+            botType.value =
+                botCodeConfig.bot_type
+                || '';
+
+            botType.disabled =
+                true;
+
+        }
+
+
+        /*
+         * TRADING PAIR
+         */
+        if (tradingPairSelect) {
+
+            tradingPairSelect.value =
+                botCodeConfig.trading_pair
+                || '';
+
+            tradingPairSelect.disabled =
+                true;
+
+        }
+
+
+        /*
+         * DURATION
+         */
+        if (duration) {
+
+            duration.value =
+                botCodeConfig.duration
+                || '';
+
+            duration.disabled =
+                true;
+
+        }
+
+
+        /*
+         * INVESTMENT
+         */
+        if (
             amountInput &&
-            botCodeConfig.amount !== null
+            botCodeConfig.amount !== null &&
+            botCodeConfig.amount !== undefined
         ) {
 
             amountInput.value =
+                botCodeConfig.amount;
+
+            amountInput.readOnly =
+                true;
+
+        }
+
+
+        /*
+         * Copy all validated values into
+         * the hidden submission fields.
+         */
+        if (submittedBotType) {
+
+            submittedBotType.value =
+                botCodeConfig.bot_type
+                || '';
+
+        }
+
+
+        if (tradingPair) {
+
+            tradingPair.value =
+                botCodeConfig.trading_pair
+                || '';
+
+        }
+
+
+        if (submittedDuration) {
+
+            submittedDuration.value =
+                botCodeConfig.duration
+                || '';
+
+        }
+
+
+        if (
+            submittedAmount &&
+            botCodeConfig.amount !== null &&
+            botCodeConfig.amount !== undefined
+        ) {
+
+            submittedAmount.value =
                 botCodeConfig.amount;
 
         }
@@ -3376,33 +3550,96 @@ syncBotCodeSubmissionFields();
 
     /*
      * ---------------------------------------------------------
-     * NORMAL MANUAL BOT SELECTION
+     * MANUAL PAIR CHANGE
      * ---------------------------------------------------------
      */
 
-    if (botType) {
+    if (tradingPairSelect) {
 
-        botType.addEventListener(
+        tradingPairSelect.addEventListener(
             'change',
             function () {
 
-                /*
-                 * Do not allow changing the bot
-                 * when a Bot Code is active.
-                 */
-
                 if (
-                    botCodeConfig
+                    isBotCodeMode
                 ) {
 
                     return;
 
                 }
 
+                if (tradingPair) {
 
-                populateDurations(
-                    this.value
-                );
+                    tradingPair.value =
+                        this.value || '';
+
+                }
+
+            }
+        );
+
+    }
+
+
+    /*
+     * ---------------------------------------------------------
+     * MANUAL DURATION CHANGE
+     * ---------------------------------------------------------
+     */
+
+    if (duration) {
+
+        duration.addEventListener(
+            'change',
+            function () {
+
+                if (
+                    isBotCodeMode
+                ) {
+
+                    return;
+
+                }
+
+                if (submittedDuration) {
+
+                    submittedDuration.value =
+                        this.value || '';
+
+                }
+
+            }
+        );
+
+    }
+
+
+    /*
+     * ---------------------------------------------------------
+     * MANUAL AMOUNT CHANGE
+     * ---------------------------------------------------------
+     */
+
+    if (amountInput) {
+
+        amountInput.addEventListener(
+            'input',
+            function () {
+
+                if (
+                    isBotCodeMode
+                ) {
+
+                    return;
+
+                }
+
+                if (submittedAmount) {
+
+                    submittedAmount.value =
+                        this.value || '';
+
+                }
 
             }
         );
@@ -3416,11 +3653,26 @@ syncBotCodeSubmissionFields();
      * ---------------------------------------------------------
      */
 
-    applyBotCodeConfiguration();
+    if (
+        isBotCodeMode
+    ) {
+
+        initializeBotCodeMode();
+
+    } else {
+
+        initializeManualMode();
+
+    }
+
+
+    /*
+     * Final synchronization.
+     */
+    syncSubmissionFields();
 
 
 })();
-
 </script>
 
 
@@ -3732,42 +3984,45 @@ syncBotCodeSubmissionFields();
                  * explicitly add their values to the AJAX request.
                  */
                 
-                const launchBotType =
-                    document.getElementById(
-                        'botType'
-                    );
-                
-                const launchDuration =
-                    document.getElementById(
-                        'botDuration'
-                    );
-                
-                
-                if (
-                    launchBotType &&
-                    launchBotType.value
-                ) {
-                
-                    formData.set(
-                        'bot_type',
-                        launchBotType.value
-                    );
-                
-                }
-                
-                
-                if (
-                    launchDuration &&
-                    launchDuration.value
-                ) {
-                
-                    formData.set(
-                        'duration',
-                        launchDuration.value
-                    );
-                
-                }
-                
+                /*
+ * Synchronize disabled/hidden fields.
+ */
+if (
+    typeof window.syncBotLaunchSubmissionFields ===
+    'function'
+) {
+
+    window.syncBotLaunchSubmissionFields();
+
+}
+
+formData.set(
+    'bot_type',
+    document.getElementById(
+        'submitted_bot_type'
+    )?.value || ''
+);
+
+formData.set(
+    'trading_pair',
+    document.getElementById(
+        'tradingPair'
+    )?.value || ''
+);
+
+formData.set(
+    'duration',
+    document.getElementById(
+        'submitted_duration'
+    )?.value || ''
+);
+
+formData.set(
+    'amount',
+    document.getElementById(
+        'submitted_amount'
+    )?.value || ''
+);
                 
                 
                 /*
@@ -3892,16 +4147,52 @@ syncBotCodeSubmissionFields();
                      * Reset amount after successful launch.
                      */
                     const amountInput =
-                        form.querySelector(
-                            'input[name="amount"]'
-                        );
-                    
-                    if (amountInput) {
-                    
-                        amountInput.value =
-                            '';
-                    
-                    }
+    document.getElementById(
+        'investmentAmount'
+    );
+
+const submittedAmount =
+    document.getElementById(
+        'submitted_amount'
+    );
+
+if (amountInput) {
+
+    amountInput.value =
+        '';
+
+}
+
+if (submittedAmount) {
+
+    submittedAmount.value =
+        '';
+
+}
+
+const amountInput =
+    document.getElementById(
+        'investmentAmount'
+    );
+
+const submittedAmount =
+    document.getElementById(
+        'submitted_amount'
+    );
+
+if (amountInput) {
+
+    amountInput.value =
+        '';
+
+}
+
+if (submittedAmount) {
+
+    submittedAmount.value =
+        '';
+
+}
 
 
                     /*
