@@ -4010,6 +4010,7 @@ window.syncBotLaunchSubmissionFields =
                 
                 }
                 
+                
                 /*
                  * Now create FormData.
                  */
@@ -4020,28 +4021,45 @@ window.syncBotLaunchSubmissionFields =
                 
                 
                 /*
-                 * Explicitly set the authoritative duration.
+                 * ---------------------------------------------------------
+                 * AUTHORITATIVE DURATION
+                 * ---------------------------------------------------------
+                 *
+                 * Manual Mode:
+                 *     User-selected duration.
+                 *
+                 * Bot Code Mode:
+                 *     Validated Bot Code duration.
+                 *
+                 * The visible field is the authoritative UI value.
                  */
-                const launchSubmittedDuration =
+                const launchDuration =
                     document.getElementById(
-                        'submitted_duration'
+                        'botDuration'
                     );
                 
                 formData.set(
                     'duration',
-                    launchSubmittedDuration
-                        ? launchSubmittedDuration.value
+                    launchDuration
+                        ? launchDuration.value
                         : ''
                 );
                 
                 
+                /*
+                 * BOT TYPE
+                 */
                 formData.set(
                     'bot_type',
                     document.getElementById(
                         'submitted_bot_type'
                     )?.value || ''
                 );
-
+                
+                
+                /*
+                 * TRADING PAIR
+                 */
                 formData.set(
                     'trading_pair',
                     document.getElementById(
@@ -4049,6 +4067,10 @@ window.syncBotLaunchSubmissionFields =
                     )?.value || ''
                 );
                 
+                
+                /*
+                 * INVESTMENT AMOUNT
+                 */
                 formData.set(
                     'amount',
                     document.getElementById(
@@ -4056,8 +4078,10 @@ window.syncBotLaunchSubmissionFields =
                     )?.value || ''
                 );
                 
-
-
+                
+                /*
+                 * DEBUG
+                 */
                 console.log(
                     'BOT DURATION:',
                     document.getElementById(
@@ -4070,6 +4094,13 @@ window.syncBotLaunchSubmissionFields =
                     document.getElementById(
                         'submitted_duration'
                     )?.value
+                );
+                
+                console.log(
+                    'FORM DATA DURATION:',
+                    formData.get(
+                        'duration'
+                    )
                 );
                 
                 
