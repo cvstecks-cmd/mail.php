@@ -1080,7 +1080,10 @@ $durationOptions = $botSetting
             $segments =
                 $this->generateSimulationSegments(
                     $simulationTarget,
-                    $durationSeconds
+                    $durationSeconds,
+                    $maxFinalProfit > 0
+                        ? $amount
+                        : null
                 );
 
             /*
@@ -2029,7 +2032,8 @@ $durationOptions = $botSetting
      */
     protected function generateSimulationSegments(
         float $targetProfit,
-        int $durationSeconds
+        int $durationSeconds,
+        ?float $capitalBoundary = null
     ): array {
 
         $minutes =
@@ -2308,6 +2312,51 @@ $durationOptions = $botSetting
 
                 $allocatedUnits +=
                     $segmentUnits;
+            }
+            
+            /*
+             * ============================================================
+             * CAPITAL BOUNDARY FOR PROFIT-CAPABLE SIMULATIONS
+             * ============================================================
+             *
+             * When the configured final P/L range contains a positive
+             * value, the simulation is allowed to fluctuate freely,
+             * including deep temporary losses.
+             *
+             * However, it must never cross below the user's investment
+             * capital. Otherwise the normal capital-exhaustion
+             * termination would end the trade before its scheduled
+             * final result.
+             */
+            if (
+                $capitalBoundary !== null
+                &&
+                $capitalBoundary > 0
+            ) {
+            
+                $capitalFloorUnits =
+                    (int) round(
+                        -$capitalBoundary *
+                        100000000
+                    );
+            
+                $proposedCumulativeUnits =
+                    $cumulativeUnits +
+                    $segmentUnits;
+            
+                /*
+                 * Do not allow cumulative P/L to cross below
+                 * the user's invested capital.
+                 */
+                if (
+                    $proposedCumulativeUnits <=
+                    $capitalFloorUnits
+                ) {
+            
+                    $segmentUnits =
+                        $capitalFloorUnits -
+                        $cumulativeUnits;
+                }
             }
 
             $cumulativeUnits +=
