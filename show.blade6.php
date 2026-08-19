@@ -4069,13 +4069,42 @@ window.syncBotLaunchSubmissionFields =
                 
                 
                 /*
-                 * INVESTMENT AMOUNT
+                 * ---------------------------------------------------------
+                 * AUTHORITATIVE INVESTMENT AMOUNT
+                 * ---------------------------------------------------------
                  */
+                const launchAmount =
+                    document.getElementById(
+                        'investmentAmount'
+                    );
+                
                 formData.set(
                     'amount',
+                    launchAmount
+                        ? launchAmount.value
+                        : ''
+                );
+                
+                
+                console.log(
+                    'INVESTMENT AMOUNT:',
+                    document.getElementById(
+                        'investmentAmount'
+                    )?.value
+                );
+                
+                console.log(
+                    'SUBMITTED AMOUNT:',
                     document.getElementById(
                         'submitted_amount'
-                    )?.value || ''
+                    )?.value
+                );
+                
+                console.log(
+                    'FORM DATA AMOUNT:',
+                    formData.get(
+                        'amount'
+                    )
                 );
                 
                 
