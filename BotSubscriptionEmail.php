@@ -3,19 +3,26 @@
 namespace App\Mail;
 
 use App\Models\BotSubscription;
-use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Bus\Queueable;
 
-class BotSubscriptionEmail extends Mailable
+class BotSubscriptionEmail extends Mailable implements ShouldQueue
 {
+    
     use Queueable, SerializesModels;
+    
+    public $tries = 3;
+
+    public $timeout = 120;
 
     public $subscription;
 
     public $type;
 
     public $details;
+    
 
     /**
      * Supported types:
