@@ -2320,13 +2320,19 @@ $durationOptions = $botSetting
              * ============================================================
              *
              * When the configured final P/L range contains a positive
-             * value, the simulation is allowed to fluctuate freely,
-             * including deep temporary losses.
+             * value, the simulation is allowed to fluctuate freely.
              *
-             * However, it must never cross below the user's investment
-             * capital. Otherwise the normal capital-exhaustion
-             * termination would end the trade before its scheduled
-             * final result.
+             * However:
+             *
+             * 1. The individual minute P/L must never represent a loss
+             *    greater than the user's investment capital.
+             *
+             * 2. The accumulated/current P/L must never fall below the
+             *    user's investment capital.
+             *
+             * This preserves realistic fluctuations while preventing
+             * capital-exhaustion termination before the scheduled final
+             * simulation result.
              */
             if (
                 $capitalBoundary !== null
@@ -2334,28 +2340,77 @@ $durationOptions = $botSetting
                 $capitalBoundary > 0
             ) {
             
+                /*
+                 * Convert the user's investment amount into the same
+                 * 1e-8 integer units used by the simulation.
+                 */
                 $capitalFloorUnits =
-                    (int) round(
-                        -$capitalBoundary *
-                        100000000
-                    );
+                (int) round(
+                    -$capitalBoundary *
+                    100000000
+                ) + 1;
             
+                /*
+                 * --------------------------------------------------------
+                 * 1. INDIVIDUAL MINUTE P/L BOUNDARY
+                 * --------------------------------------------------------
+                 *
+                 * A single minute must not lose more than the entire
+                 * investment capital.
+                 *
+                 * Example:
+                 *
+                 * Investment = $20
+                 *
+                 * Allowed:
+                 *     -19.50
+                 *     -19.99
+                 *
+                 * Not allowed:
+                 *     -20.01
+                 *     -25.00
+                 */
+                if (
+                    $segmentUnits <
+                    $capitalFloorUnits
+                ) {
+            
+                    $segmentUnits =
+                        $capitalFloorUnits;
+                }
+            
+                /*
+                 * --------------------------------------------------------
+                 * 2. ACCUMULATED / CURRENT P/L BOUNDARY
+                 * --------------------------------------------------------
+                 *
+                 * Check the proposed cumulative P/L after this minute.
+                 */
                 $proposedCumulativeUnits =
                     $cumulativeUnits +
                     $segmentUnits;
             
                 /*
-                 * Do not allow cumulative P/L to cross below
-                 * the user's invested capital.
+                 * If the accumulated P/L would cross the user's
+                 * investment-capital boundary, bring this minute back
+                 * to the exact capital floor.
                  */
                 if (
-                    $proposedCumulativeUnits <=
+                    $proposedCumulativeUnits <
                     $capitalFloorUnits
                 ) {
             
                     $segmentUnits =
                         $capitalFloorUnits -
                         $cumulativeUnits;
+            
+                    /*
+                     * Recalculate the proposed cumulative value after
+                     * applying the accumulated-P/L protection.
+                     */
+                    $proposedCumulativeUnits =
+                        $cumulativeUnits +
+                        $segmentUnits;
                 }
             }
 
