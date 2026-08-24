@@ -255,6 +255,9 @@
      ========================================================= -->
 
 <div class="dashboard-market-section">
+    <div class="coin-category-description">
+            Popular tokens
+        </div>
 
     <!-- Main Tabs -->
 
@@ -324,11 +327,6 @@
                 SOL
             </button>
 
-        </div>
-
-
-        <div class="coin-category-description">
-            Popular tokens
         </div>
 
 
@@ -418,7 +416,7 @@
                         asset
                         asset-item
                         dashboard-coin-row
-                        {{ $index >= 3 ? 'extra-coin hidden-coin' : '' }}
+                        extra-coin
                     "
                     data-symbol="{{ $asset['symbol'] }}"
                     data-category="{{ $category }}"
@@ -1624,5 +1622,44 @@ this.classList.add(
     
     // Fallback trigger
     setTimeout(initAllDashboardScripts, 500);
+    
+    document
+.querySelectorAll('.mover-tab')
+.forEach(
+function(tab){
+
+    tab.addEventListener(
+        'click',
+        function(){
+
+            document
+            .querySelectorAll('.mover-tab')
+            .forEach(
+                function(button){
+
+                    button.classList.remove(
+                        'active'
+                    );
+
+                }
+            );
+
+
+            this.classList.add(
+                'active'
+            );
+
+
+            let category =
+            this.dataset.moverCategory;
+
+
+            loadTopMovers(category);
+
+
+        }
+    );
+
+});
   </script>
 </div>
